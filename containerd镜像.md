@@ -1,5 +1,21 @@
 **1. nerdctl  pull nginx:1.21**
 
+```
+[root@centos7 ~]# nerdctl pull  nginx:1.21
+docker.io/library/nginx:1.21:                                                     resolved       |++++++++++++++++++++++++++++++++++++++|
+index-sha256:0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31:    done           |++++++++++++++++++++++++++++++++++++++|
+manifest-sha256:ee89b00528ff4f02f2405e4ee221743ebc3f8e8dd0bfd5c4c20a2fa2aaa7ede3: done           |++++++++++++++++++++++++++++++++++++++|
+config-sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85:   done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:589b7251471a3d5fe4daccdddfefa02bdc32ffcba0a6d6a2768bf2c401faf115:    done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:a0bcbecc962ed2552e817f45127ffb3d14be31642ef3548997f58ae054deb5b2:    done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:a2abf6c4d29d43a4bf9fbb769f524d0fb36a2edab49819c1bf3e76f409f953ea:    done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d:    done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:a9edb18cadd1336142d6567ebee31be2a03c0905eeefe26cb150de7b0fbc520b:    done           |++++++++++++++++++++++++++++++++++++++|
+layer-sha256:b4df32aa5a72e2a4316aad3414508ccd907d87b4ad177abd7cbd62fa4dab2a2f:    done           |++++++++++++++++++++++++++++++++++++++|
+elapsed: 30.1s                                                                    total:  12.8 K (434.0 B/s)
+
+```
+
 **/var/lib/containerd/io.containerd.metadata.v1.bolt目录下查看**
 
 **boltbrowser 1meta.db （meta.db的复制）**
@@ -10,16 +26,15 @@
   - v1                                                                                         | Path: v1 → default → content → ingests                                                       
     - default                                                                                  | Buckets: 0                                                                                   
       - content                                                                                | Pairs: 0                                                                                     
-        - blob                                                                                 |                                                                                              
-          + sha256:0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31            |                                                                                              
-          + sha256:186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d            |                                                                                              
+        - blob                                                                                                                                                    |                                                                                              
+          + sha256:0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31(index-sha256)                                                                                           + sha256:186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d            |                                                                                
           + sha256:589b7251471a3d5fe4daccdddfefa02bdc32ffcba0a6d6a2768bf2c401faf115            |                                                                                              
-          + sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85            |                                                                                              
+          + sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85 (config-sha256)                                                                                            
           + sha256:a0bcbecc962ed2552e817f45127ffb3d14be31642ef3548997f58ae054deb5b2            |                                                                                              
           + sha256:a2abf6c4d29d43a4bf9fbb769f524d0fb36a2edab49819c1bf3e76f409f953ea            |                                                                                              
           + sha256:a9edb18cadd1336142d6567ebee31be2a03c0905eeefe26cb150de7b0fbc520b            |                                                                                              
           + sha256:b4df32aa5a72e2a4316aad3414508ccd907d87b4ad177abd7cbd62fa4dab2a2f            |                                                                                              
-          + sha256:ee89b00528ff4f02f2405e4ee221743ebc3f8e8dd0bfd5c4c20a2fa2aaa7ede3            |                                                                                              
+          + sha256:ee89b00528ff4f02f2405e4ee221743ebc3f8e8dd0bfd5c4c20a2fa2aaa7ede3 (manifest-sha256)                                                                                                   
         - ingests                                                                              |                                                                                              
       - images                                                                                 |                                                                                              
         - docker.io/library/nginx:1.21                                                         |                                                                                              
@@ -68,7 +83,7 @@
           \_ sha256:b625d8e29573fa369e799ca7c5df8b7a902126d2b7cbeb390af59e4b9e1210c5
 ```
 
-**/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256/目录下** 
+**/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256/目录下**
 
 **因为pull了1个index, 1个config, 1个manifest和6个layer(解压后就是6个snapshots)**
 
