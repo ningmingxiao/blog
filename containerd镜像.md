@@ -13,7 +13,6 @@ layer-sha256:186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d:  
 layer-sha256:a9edb18cadd1336142d6567ebee31be2a03c0905eeefe26cb150de7b0fbc520b:    done           |++++++++++++++++++++++++++++++++++++++|
 layer-sha256:b4df32aa5a72e2a4316aad3414508ccd907d87b4ad177abd7cbd62fa4dab2a2f:    done           |++++++++++++++++++++++++++++++++++++++|
 elapsed: 30.1s                                                                    total:  12.8 K (434.0 B/s)
-
 ```
 
 **/var/lib/containerd/io.containerd.metadata.v1.bolt目录下查看**
@@ -69,6 +68,14 @@ elapsed: 30.1s                                                                  
               sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe7c:         |                                                                                              
             - labels                                                                           |                                                                                              
               containerd.io/snapshot.ref: sha256:780238f18c540007376dd5e904f583896a69fe620876ca|                  
+```
+
+**目录下/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256**
+
+```
+[root@centos7 sha256]# sha256sum 0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31
+校验结果 0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31  (文件名)0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31
+
 ```
 
 **2.[root@LIN-FFF47298CDA containerd]# ctr snapshots ls 其中一个没有parent ，没有parent的是基础层的chainid,一共6层**
