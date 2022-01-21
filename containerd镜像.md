@@ -71,11 +71,43 @@
 3.**meta 数据  /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db**
 
 ```
-                                                                                   boltbrowser: 1metadata.db                                                                                  
 ===============================================================================================|==============================================================================================
-        kind: 03                                                                               | Path: v1 → snapshots → default/8/sha256:02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440af
-        size: 8080ee55                                                                         | Key: updatedat                                                                               
-        updatedat: 010000000ed97ac3a80db6dc36ffff                                              | Value: 010000000ed97ac3ef0807bd5affff                                                        
+  - v1                                                                                         | Path: v1 → snapshots → default/2/sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9
+    - parents                                                                                  | Key: inodes                                                                                  
+      010002: default/4/sha256:780238f18c540007376dd5e904f583896a69fe620876cabc06977a3af4ba4fb5| Value: b84b                                                                                  
+      020003: default/6/sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe7c|                                                                                              
+      030004: default/8/sha256:02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440afd5163a5f1c4|                                                                                              
+      040005: default/10/sha256:7850d382fb05e393e211067c5ca0aada2111fcbe550a90fed04d1c634bd31a1|                                                                                              
+      050006: default/12/sha256:b625d8e29573fa369e799ca7c5df8b7a902126d2b7cbeb390af59e4b9e1210c|                                                                                              
+    - snapshots                                                                                |                                                                                              
+      - default/10/sha256:7850d382fb05e393e211067c5ca0aada2111fcbe550a90fed04d1c634bd31a14     |                                                                                              
+        - labels                                                                               |                                                                                              
+          containerd.io/snapshot.ref: sha256:7850d382fb05e393e211067c5ca0aada2111fcbe550a90fed0|                                                                                              
+        createdat: 010000000ed97ac3ef090d39a6ffff                                              |                                                                                              
+        id: 05                                                                                 |                                                                                              
+        inodes: 06                                                                             |                                                                                              
+        kind: 03                                                                               |                                                                                              
+        parent: default/8/sha256:02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440afd5163a5f1|                                                                                              
+        size: 8040                                                                             |                                                                                              
+        updatedat: 010000000ed97ac3ef090d39a6ffff                                              |                                                                                              
+      - default/12/sha256:b625d8e29573fa369e799ca7c5df8b7a902126d2b7cbeb390af59e4b9e1210c5     |                                                                                              
+        + labels                                                                               |                                                                                              
+        createdat: 010000000ed97ac3ef0a016a20ffff                                              |                                                                                              
+        id: 06                                                                                 |                                                                                              
+        inodes: 06                                                                             |                                                                                              
+        kind: 03                                                                               |                                                                                              
+        parent: default/10/sha256:7850d382fb05e393e211067c5ca0aada2111fcbe550a90fed04d1c634bd31|                                                                                              
+        size: 808001                                                                           |                                                                                              
+        updatedat: 010000000ed97ac3ef0a016a20ffff                                              |                                                                                              
+      - default/2/sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f      |                                                                                              
+        - labels                                                                               |                                                                                              
+          containerd.io/snapshot.ref: sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41|                                                                                              
+        createdat: 010000000ed97ac3a80db6dc36ffff                                              |                                                                                              
+        id: 01                                                                                 |                                                                                              
+        inodes: b84b                                                                           |                                                                                              
+        kind: 03                                                                               |                                                                                              
+        size: 8080ee55                                                                         |                                                                                              
+        updatedat: 010000000ed97ac3a80db6dc36ffff                                              |                                                                                              
       - default/4/sha256:780238f18c540007376dd5e904f583896a69fe620876cabc06977a3af4ba4fb5      |                                                                                              
         - labels                                                                               |                                                                                              
           containerd.io/snapshot.ref: sha256:780238f18c540007376dd5e904f583896a69fe620876cabc06|                                                                                              
@@ -85,7 +117,7 @@
         kind: 03                                                                               |                                                                                              
         parent: default/2/sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c85|                                                                                              
         size: 80c0ab3c                                                                         |                                                                                              
-        updatedat: 010000000ed97ac3ef05ab5c22ffff                                              |                                                                                              
+        updatedat: 010000000ed97ac3ef05ab5c22ffff   
       - default/6/sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe7c      |                                                                                              
         - labels                                                                               |                                                                                              
           containerd.io/snapshot.ref: sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b|                                                                                              
@@ -105,7 +137,7 @@
         kind: 03                                                                               |                                                                                              
         parent: default/6/sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe|                                                                                              
         size: 8040                                                                             |                                                                                              
-        updatedat: 010000000ed97ac3ef0807bd5affff                                              |                                                                                                                                                                                                                          |                                                                                                                          |                                                                                                               |                                                                                                                                      |                                                                                               |                                         
+        updatedat: 010000000ed97ac3ef0807bd5affff                                               |                            
 ```
 
 **4.在/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256/ 目录下**
