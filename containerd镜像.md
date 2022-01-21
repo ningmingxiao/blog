@@ -56,7 +56,7 @@
               containerd.io/snapshot.ref: sha256:780238f18c540007376dd5e904f583896a69fe620876ca|                  
 ```
 
-**2.[root@LIN-FFF47298CDA containerd]# ctr snapshots ls  其中一个没有parent ，没有parent的是基础层的chainid**
+**2.[root@LIN-FFF47298CDA containerd]# ctr snapshots ls  其中一个没有parent ，没有parent的是基础层的chainid,一共6层** 
 
 ```
 [root@LIN-FFF47298CDA containerd]# ctr snapshot tree
@@ -68,7 +68,7 @@
           \_ sha256:b625d8e29573fa369e799ca7c5df8b7a902126d2b7cbeb390af59e4b9e1210c5
 ```
 
-3.**meta 数据  /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db**
+3.**meta 数据  /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db  （id最高是6）** 
 
 ```
 ===============================================================================================|==============================================================================================
