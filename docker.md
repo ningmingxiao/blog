@@ -466,3 +466,4 @@ INFO[0013] created new.tar from ./diff/ and ./tar-split.json.gz (wrote 83858432 
 **校验hash值 sha256sum new.tar正确是diffID(0)表明镜像层是完整的没有缺失**
 
 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
+
