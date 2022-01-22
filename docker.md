@@ -423,3 +423,7 @@ chainID(1) = echo -n 'sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41e
 [root@centos7 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f]# cat /var/lib/docker/image/overlay2/layerdb/sha256/2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f/size
 80372237=76.6m
 ```
+
+**cat cache-id 实际位置**
+
+f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08
