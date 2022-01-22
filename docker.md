@@ -453,7 +453,7 @@ f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08
 │   └── tar-split.json.gz
 ```
 
-**恢复镜像层文件(diff目录)**
+**恢复镜像层压缩文件(diff目录)**
 
 ```
 [root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]#  tar-split asm --output new.tar --input ./tar-split.json.gz  --path ./diff/
@@ -463,6 +463,6 @@ INFO[0013] created new.tar from ./diff/ and ./tar-split.json.gz (wrote 83858432 
 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f  new.tar
 ```
 
-**校验hash值 sha256sum new.tar正确是diffID(0)**
+**校验hash值 sha256sum new.tar正确是diffID(0)表明镜像层是完整的没有缺失**
 
 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
