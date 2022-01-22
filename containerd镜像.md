@@ -162,7 +162,6 @@ elapsed: 30.1s                                                                  
     "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
     "schemaVersion": 2
 }
-
 ```
 
 **manifest文件内容**
@@ -210,7 +209,6 @@ elapsed: 30.1s                                                                  
     "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
     "schemaVersion": 2
 }
-
 ```
 
 **config文件内容**
@@ -379,7 +377,6 @@ elapsed: 30.1s                                                                  
         "type": "layers"
     }
 }
-
 ```
 
 **2.[root@LIN-FFF47298CDA containerd]# ctr snapshots ls 其中一个没有parent ，没有parent的是基础层的chainid,一共6层**
@@ -549,3 +546,44 @@ id是02  对应 /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/sna
 chanID(2)=b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe7c
 
 id是03  对应 /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3
+
+chanID(3)=02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440afd5163a5f1c4
+
+**6.镜像层还原校验在/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256目录**
+
+复制到其他目录186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d 改为
+
+186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d.gz
+
+（1）gzip -d 186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d.gz 生成186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d (tar文件类型和之前的不同之前是gz类型虽然名字一样)
+
+（2）mkdir ./x
+
+然后 执行命令生成 tar-data.json.gz
+
+**tar-split disasm --output tar-data.json.gz ./186b1aaa4aa6c480e92fbd982ee7c08037ef85114fbed73dbb62503f24c1dd7d | tar -C ./x -x**
+
+（3）测试：tar-split disasm --output tar-data.json.gz ./archive.tar | tar -C ./x -x 生成new.tar
+
+[root@centos7 nmx]# sha256sum new.tar
+f1db227348d0a5e0b99b15a096d930d1a69db7474a1847acbc31f05e4ef8df8c new.tar
+
+**根据 chain id（3）02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440afd5163a5f1c4**
+
+**metadata.db找到 id是04因此**
+
+**path=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs/(要有fs)**
+
+**（4）生成 new1.tar 并校验**
+
+```
+[root@centos7 nmx]# tar-split asm --output new1.tar --input ./tar-data.json.gz --path /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs/
+INFO[0000] created new1.tar from /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs/ and ./tar-data.json.gz (wrote 4096 bytes)
+```
+
+```
+[root@centos7 nmx]# sha256sum new1.tar
+f1db227348d0a5e0b99b15a096d930d1a69db7474a1847acbc31f05e4ef8df8c  new1.tar校验
+```
+
+**校验结果是f1db227348d0a5e0b99b15a096d930d1a69db7474a1847acbc31f05e4ef8df8c是diffID(3)**
