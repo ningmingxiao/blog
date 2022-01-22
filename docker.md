@@ -1,6 +1,21 @@
 **1.以docker 17.12为例** 
 参考：(https://blog.csdn.net/sjy8207380/article/details/85125531)
 
+**一些概念**
+
+**ImageID：唯一标志一个镜像，其数值根据该镜像的元数据配置文件采用sha256算法的计算获得**
+
+**cacheID:由宿主机随即生成的一个uuid，根镜像层文件一一对应，用于宿主机标志和索引镜像层文件**
+
+**diffID:镜像层校验ID、根据该镜像层的打包文件校验获得**
+
+**chainID:docker内容寻址机制采用的索引ID，其值根据当前层和所有祖先层的diffID算得**：
+
+- 若该镜像层是最底层，那么其chainID 和 diffID 相同
+- 否则，chainID=sha256(父层chainID+" "+本层diffID)
+
+**parent：父镜像层的chainID(最底层不含该文件)**
+
 cat /etc/docker/daemon.json
 
 ```
@@ -203,6 +218,8 @@ docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜�
 **4.layer元数据**
 
 **/var/lib/docker/image/overlay2/layerdb/sha256保留layer元数据****
+
+**每个diffid对应一个layer tar包的sha256**
 
 layer包含了上一个layer上的改动情况，主要包含三方面的内容：
 1）变化类型：是增加、修改还是删除了文件
@@ -409,13 +426,11 @@ chainID(1) = echo -n 'sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41e
 ├── trust
 └── volumes
     └── metadata.db
-
 ```
 
 **cd /var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08查看大小**
 
 ```
-
 [root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]# du -s
 87924=85.8m     .
 
@@ -424,6 +439,28 @@ chainID(1) = echo -n 'sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41e
 80372237=76.6m
 ```
 
-**cat cache-id 实际位置**
+**cat cache-id实际位置**
 
 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08
+
+cd **/var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08进行恢复镜像层 其中tar-split.json.gz取自 /var/lib/docker/image/overlay2/layerdb/sha256/2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f**
+
+```
+├── 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
+│   ├── cache-id
+│   ├── diff
+│   ├── size
+│   └── tar-split.json.gz
+```
+
+```
+[root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]#  tar-split asm --output new.tar --input ./tar-split.json.gz  --path ./diff/
+INFO[0013] created new.tar from ./diff/ and ./tar-split.json.gz (wrote 83858432 bytes)
+
+[root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]#  sha256sum new.tar
+2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f  new.tar
+```
+
+**校验hash值 sha256sum new.tar正确是diffID(0)**
+
+2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
