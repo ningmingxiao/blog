@@ -443,7 +443,7 @@ chainID(1) = echo -n 'sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41e
 
 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08
 
-cd **/var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08进行恢复镜像层 其中tar-split.json.gz取自 /var/lib/docker/image/overlay2/layerdb/sha256/2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f**
+**cd** **/var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08进行恢复镜像层 其中tar-split.json.gz取自 /var/lib/docker/image/overlay2/layerdb/sha256/2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f**
 
 ```
 ├── 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
@@ -452,6 +452,8 @@ cd **/var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9e
 │   ├── size
 │   └── tar-split.json.gz
 ```
+
+**恢复镜像层文件(diff目录)**
 
 ```
 [root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]#  tar-split asm --output new.tar --input ./tar-split.json.gz  --path ./diff/
