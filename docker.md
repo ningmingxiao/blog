@@ -29,7 +29,7 @@ cat /etc/docker/daemon.json
 
 **2.docker pull nginx:1.21**
 
-docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜像 ID。上图中的两条记录本质上是一样的，第二条记录和第一条记录指向同一个镜像 ID。其中"sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85 被称为镜像的摘要
+docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜像 ID。两条记录本质上是一样的，第二条记录和第一条记录指向同一个镜像 ID。其中"sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85 被称为镜像的摘要
 
 - 镜像摘要Digest：SHA256对镜像manifest内容计算
 - 对于本地生成的镜像来说，由于没有上传到registry上去，所以没有digest，因为镜像的manifest由registry生成
@@ -478,4 +478,4 @@ sha256sum new.tar
 e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8  new.tar
 ```
 
-**e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad = diffID(1)**
+**e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8 = diffID(1)**
