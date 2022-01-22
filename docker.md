@@ -4,22 +4,17 @@
 cat /etc/docker/daemon.json
 
 ```
-
 {
     "storage-driver": "overlay2",
     "storage-opts": [
         "overlay2.override_kernel_check=true"
     ]
 }
-
 ```
 
-**2.docker pull  nginx:1.21**
+**2.docker pull nginx:1.21**
 
 docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜像 ID。上图中的两条记录本质上是一样的，第二条记录和第一条记录指向同一个镜像 ID。其中"sha256:605c77e624ddb75e6110f997c58876baa13f8754486b461117934b24a9dc3a85 被称为镜像的摘要
-
-
-
 
 - 镜像摘要Digest：SHA256对镜像manifest内容计算
 - 对于本地生成的镜像来说，由于没有上传到registry上去，所以没有digest，因为镜像的manifest由registry生成
@@ -193,9 +188,9 @@ docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜�
     "os": "linux",
     "rootfs": {
         "diff_ids": [
-            "sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f",
-            "sha256:e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8",
-            "sha256:b8d6e692a25e11b0d32c5c3dd544b71b1085ddc1fddad08e68cbd7fda7f70221",
+          (0)  "sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f",
+          (1) "sha256:e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8",
+          (2)  "sha256:b8d6e692a25e11b0d32c5c3dd544b71b1085ddc1fddad08e68cbd7fda7f70221",
             "sha256:f1db227348d0a5e0b99b15a096d930d1a69db7474a1847acbc31f05e4ef8df8c",
             "sha256:32ce5f6a5106cc637d09a98289782edf47c32cb082dc475dd47cbf19a4f866da",
             "sha256:d874fd2bc83bb3322b566df739681fbd2248c58d3369cb25908d68e7ed6040a6"
@@ -203,10 +198,7 @@ docker 默认采用 SHA256 算法根据镜像元数据配置文件计算出镜�
         "type": "layers"
     }
 }
-
 ```
-
-
 
 **4.layer元数据**
 
@@ -219,7 +211,6 @@ layer包含了上一个layer上的改动情况，主要包含三方面的内容�
 chainID的计算方法
 1）如果该镜像层是最底层(没有父镜像层)，该层的 diffID 便是 chainID。
 2）该镜像层的 chainID 计算公式为 chainID(n)=SHA256(chain(n-1) diffID(n))，也就是根据父镜像层的 chainID 加上一个空格和当前层的 diffID，再计算 SHA256 校验码。
-
 
 ```
 目录/var/lib/docker/image/overlay2/layerdb/sha256
@@ -262,8 +253,6 @@ chainID的计算方法
     └── tar-split.json.gz
 
 6 directories, 29 files
-
-
 ```
 
 - chche-id: 本机随机生成的uuid用来标识在本机器上唯一
@@ -271,6 +260,166 @@ chainID的计算方法
 - parent: 父layer的chainId
 - size: 这个layer的大小
 
+**最底层：chainID=diffID**
+
+**其他层公式：chainID(n)=sha256sum(chainID(n-1)) diffID(n))**
+
+**chainID(0)=sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f**
+chainID(1) = echo -n 'sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f sha256:e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8' | sha256sum
+结果是**chainID(1)=sha256:780238f18c540007376dd5e904f583896a69fe620876cabc06977a3af4ba4fb5**
+
+**chaiID(2)=sha256:b92aa5824592ecb46e6d169f8e694a99150ccef01a2aabea7b9c02356cdabe7c **
+
+**chainID(3)==sha256:02b80ac2055edd757a996c3d554e6a8906fd3521e14d1227440afd5163a5f1c4**
+
+**chainID(4)=sha256:7850d382fb05e393e211067c5ca0aada2111fcbe550a90fed04d1c634bd31a14**
+
+**chainID(5)=sha256:b625d8e29573fa369e799ca7c5df8b7a902126d2b7cbeb390af59e4b9e1210c5**
+
+**目录/var/lib/docker下**
+
+```
+[root@centos7 docker]# tree -L 4
+.
+├── builder
+│   └── fscache.db
+├── containerd
+│   └── daemon
+│       ├── io.containerd.content.v1.content
+│       │   └── ingest
+│       ├── io.containerd.metadata.v1.bolt
+│       │   └── meta.db
+│       ├── io.containerd.runtime.v1.linux
+│       ├── io.containerd.snapshotter.v1.btrfs
+│       └── io.containerd.snapshotter.v1.overlayfs
+│           └── snapshots
+├── containers
+├── image
+│   └── overlay2
+│       ├── distribution
+│       │   ├── diffid-by-digest
+│       │   └── v2metadata-by-diffid
+│       ├── imagedb
+│       │   ├── content
+│       │   └── metadata
+│       ├── layerdb
+│       │   ├── sha256
+│       │   └── tmp
+│       └── repositories.json
+├── network
+│   └── files
+│       └── local-kv.db
+├── overlay2
+│   ├── 371e2f28c55cf364a63c147363e6c63cd7aa33759413bf82d07d0b02763bda35
+│   │   ├── diff
+│   │   │   └── docker-entrypoint.d
+│   │   ├── link
+│   │   ├── lower
+│   │   └── work
+│   ├── 40dcc790079b2fd0fb02d641bd365b93b9da909af19e007806a1c7877e46a26c
+│   │   ├── diff
+│   │   │   ├── anaconda-post.log
+│   │   │   ├── bin -> usr/bin
+│   │   │   ├── dev
+│   │   │   ├── etc
+│   │   │   ├── home
+│   │   │   ├── lib -> usr/lib
+│   │   │   ├── lib64 -> usr/lib64
+│   │   │   ├── media
+│   │   │   ├── mnt
+│   │   │   ├── opt
+│   │   │   ├── proc
+│   │   │   ├── root
+│   │   │   ├── run
+│   │   │   ├── sbin -> usr/sbin
+│   │   │   ├── srv
+│   │   │   ├── sys
+│   │   │   ├── tmp
+│   │   │   ├── usr
+│   │   │   └── var
+│   │   └── link
+│   ├── 6040edc080d9c2372f83cba63ef2cacff0492b612fdcc453fc8578ade8c20e56
+│   │   ├── diff
+│   │   │   └── docker-entrypoint.sh
+│   │   ├── link
+│   │   ├── lower
+│   │   └── work
+│   ├── 8069c68810e7ab689858c7b7d1d9ca3ef4b9b69b6fb5288241b35f9dac2590c6
+│   │   ├── diff
+│   │   │   ├── docker-entrypoint.d
+│   │   │   ├── etc
+│   │   │   ├── lib
+│   │   │   ├── tmp
+│   │   │   ├── usr
+│   │   │   └── var
+│   │   ├── link
+│   │   ├── lower
+│   │   └── work
+│   ├── a1c4d12260507189637103755dcf250e208522b52acfc7c0d533a76a33270c71
+│   │   ├── diff
+│   │   │   └── docker-entrypoint.d
+│   │   ├── link
+│   │   ├── lower
+│   │   └── work
+│   ├── b6a96c0209c8ab8919dc620fa12be087d2a6398b9e839c17f195ced771ea2e25
+│   │   ├── diff
+│   │   │   └── docker-entrypoint.d
+│   │   ├── link
+│   │   ├── lower
+│   │   └── work
+│   ├── backingFsBlockDev
+│   ├── f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08
+│   │   ├── diff
+│   │   │   ├── bin
+│   │   │   ├── boot
+│   │   │   ├── dev
+│   │   │   ├── etc
+│   │   │   ├── home
+│   │   │   ├── lib
+│   │   │   ├── lib64
+│   │   │   ├── media
+│   │   │   ├── mnt
+│   │   │   ├── opt
+│   │   │   ├── proc
+│   │   │   ├── root
+│   │   │   ├── run
+│   │   │   ├── sbin
+│   │   │   ├── srv
+│   │   │   ├── sys
+│   │   │   ├── tmp
+│   │   │   ├── usr
+│   │   │   └── var
+│   │   └── link
+│   └── l
+│       ├── 3BHZGQ3WTNUD72A6ASYNWJF6QW -> ../8069c68810e7ab689858c7b7d1d9ca3ef4b9b69b6fb5288241b35f9dac2590c6/diff
+│       ├── 4BARNU5OAAOAWLVGD5COE25URN -> ../a1c4d12260507189637103755dcf250e208522b52acfc7c0d533a76a33270c71/diff
+│       ├── DYQPFGRYDDVV65U4LVONVOUCK4 -> ../40dcc790079b2fd0fb02d641bd365b93b9da909af19e007806a1c7877e46a26c/diff
+│       ├── GGGEPU5TSLFN5G67PUVHP2ZX6R -> ../371e2f28c55cf364a63c147363e6c63cd7aa33759413bf82d07d0b02763bda35/diff
+│       ├── J2A2FWM7UTF3KXP6FTXYBNUPL2 -> ../b6a96c0209c8ab8919dc620fa12be087d2a6398b9e839c17f195ced771ea2e25/diff
+│       ├── OWU5EFNXLYOCWTFPRLMYWV7Q4I -> ../6040edc080d9c2372f83cba63ef2cacff0492b612fdcc453fc8578ade8c20e56/diff
+│       └── XJQTWATTEH53NRDZTYRSXEOJR4 -> ../f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08/diff
+├── plugins
+│   ├── storage
+│   │   └── blobs
+│   │       └── tmp
+│   └── tmp
+├── runtimes
+├── swarm
+├── tmp
+├── trust
+└── volumes
+    └── metadata.db
+
+```
+
+**cd /var/lib/docker/overlay2/f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08查看大小**
+
+```
+
+[root@centos7 f2189063eec9479a58c43c8e884e37e86ef239ee0745199f9ebea62ebc298f08]# du -s
+87924=85.8m     .
 
 
-
+[root@centos7 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f]# cat /var/lib/docker/image/overlay2/layerdb/sha256/2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f/size
+80372237=76.6m
+```
