@@ -463,7 +463,19 @@ INFO[0013] created new.tar from ./diff/ and ./tar-split.json.gz (wrote 83858432 
 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f  new.tar
 ```
 
-**校验hash值 sha256sum new.tar正确是diffID(0)表明镜像层是完整的没有缺失**
+**5.校验hash值 sha256sum new.tar正确是diffID(0)表明镜像层是完整的没有缺失**
 
 2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f
 
+同理校验下一层
+
+/var/lib/docker/overlay2/8069c68810e7ab689858c7b7d1d9ca3ef4b9b69b6fb5288241b35f9dac2590c6
+
+下tar-split asm --output new.tar --input ./tar-split.json.gz --path ./diff/ 生成new.tar
+
+```
+sha256sum new.tar
+e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad8  new.tar
+```
+
+**e379e8aedd4d72bb4c529a4ca07a4e4d230b5a1d3f7a61bc80179e8f02421ad = diffID(1)**
