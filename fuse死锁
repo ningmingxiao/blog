@@ -402,15 +402,41 @@ cgroup_threadgroup_change_end(tsk);
 
 
 
-1、Task 打开一个 FUSE 文件，然后没有关闭它就退出了。在退出过程中，内核会调用 do_exit()，其中包括以下操作：
+1、Task 打开一个 FUSE 文件，然后没有关闭它就退出了。在退出过程中，内核会调用 do_exit()，其中包括以下操作：(业务进程)
 
 exit_signals(tsk); /* 设置 PF_EXITING 标志 */
-2、do_exit() 继续执行 exit_files(tsk);，刷新所有仍处于打开状态的文件，导致上面的堆栈跟踪。
+2、do_exit() 继续执行 exit_files(tsk);，刷新所有仍处于打开状态的文件，导致上面的堆栈跟踪。 (业务进程)
 
-3、pid 命名空间退出，并进入 zap_pid_ns_processes()，向所有线程发送一个 SIGKILL，然后等待所有线程退出。
+3、pid 命名空间退出，并进入 zap_pid_ns_processes()，向所有线程发送一个 SIGKILL，然后等待所有线程退出。(init进程向业务进程发送kill信号)
 
-4、这将杀死 pid 命名空间中的 FUSE 守护进程，使其无法响应。
+4、这将杀死 pid 命名空间中的 FUSE 守护进程，使其无法响应。 (业务进程)
 
-5、对于已经退出的 FUSE 线程，complete_signal() 会忽略该信号，因为它具有 PF_EXITING 标志。
 
-6、死锁。除非手动中止 FUSE 连接，否则这个事件将永远挂起。
+5、对于已经退出的 FUSE 线程，complete_signal() 会忽略该信号，因为它具有 PF_EXITING 标志。 (业务进程)
+
+6、死锁。除非手动中止 FUSE 连接，否则这个事件将永远挂起。(业务进程一直退不出成功,因此init也不会退出)
+
+init进程 
+# cat /proc/1528591/stack
+[<0>] do_wait+0x156/0x2f0
+[<0>] kernel_wait4+0x8d/0x140
+[<0>] zap_pid_ns_processes+0x104/0x180
+[<0>] do_exit+0xa41/0xb80
+[<0>] do_group_exit+0x3a/0xa0
+[<0>] __x64_sys_exit_group+0x14/0x20
+[<0>] do_syscall_64+0x37/0xb0
+[<0>] entry_SYSCALL_64_after_hwframe+0x44/0xae
+它正处在退出的过程中，但好像卡住了。唯一的子进
+
+业务进程
+# cat /proc/1544574/stack
+[<0>] request_wait_answer+0x12f/0x210
+[<0>] fuse_simple_request+0x109/0x2c0
+[<0>] fuse_flush+0x16f/0x1b0
+[<0>] filp_close+0x27/0x70
+[<0>] put_files_struct+0x6b/0xc0
+[<0>] do_exit+0x755/0xb80
+[<0>] do_group_exit+0x3a/0xa0
+[<0>] __x64_sys_exit_group+0x14/0x20
+[<0>] do_syscall_64+0x37/0xb0
+[<0>] entry_SYSCALL_64_after_hwframe+0x44/0xae
