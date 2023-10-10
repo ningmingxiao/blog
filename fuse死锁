@@ -1,0 +1,416 @@
+#define ___wait_event(wq_head, condition, state, exclusive, ret, cmd)		\
+({										\
+	__label__ __out;							\
+	struct wait_queue_entry __wq_entry;					\
+	long __ret = ret;	/* explicit shadow */				\
+										\
+	init_wait_entry(&__wq_entry, exclusive ? WQ_FLAG_EXCLUSIVE : 0);	\
+	for (;;) {								\
+		long __int = prepare_to_wait_event(&wq_head, &__wq_entry, state);\
+										\
+		if (condition)							\
+			break;							\
+										\
+		if (___wait_is_interruptible(state) && __int) {			\
+			__ret = __int;						\
+			goto __out;						\
+		}								\
+										\
+		cmd;								\
+	}									\
+	finish_wait(&wq_head, &__wq_entry);					\
+__out:	__ret;									\
+})
+
+prepare_to_wait_event实现如下
+long prepare_to_wait_event(struct wait_queue_head *wq_head, struct wait_queue_entry *wq_entry, int state)
+{
+	unsigned long flags;
+	long ret = 0;
+
+	spin_lock_irqsave(&wq_head->lock, flags);
+	if (signal_pending_state(state, current)) {
+		/*
+		 * Exclusive waiter must not fail if it was selected by wakeup,
+		 * it should "consume" the condition we were waiting for.
+		 *
+		 * The caller will recheck the condition and return success if
+		 * we were already woken up, we can not miss the event because
+		 * wakeup locks/unlocks the same wq_head->lock.
+		 *
+		 * But we need to ensure that set-condition + wakeup after that
+		 * can't see us, it should wake up another exclusive waiter if
+		 * we fail.
+		 */
+		list_del_init(&wq_entry->entry);
+		ret = -ERESTARTSYS;
+	} else {
+		if (list_empty(&wq_entry->entry)) {
+			if (wq_entry->flags & WQ_FLAG_EXCLUSIVE)
+				__add_wait_queue_entry_tail(wq_head, wq_entry);
+			else
+				__add_wait_queue(wq_head, wq_entry);
+		}
+		set_current_state(state);
+	}
+	spin_unlock_irqrestore(&wq_head->lock, flags);
+
+	return ret;
+}
+当signal_pending_state 返回true时候循环结束,
+static inline int signal_pending_state(long state, struct task_struct *p)
+{	
+	//#define TASK_INTERRUPTIBLE		0x0001 
+    #define TASK_WAKEKILL			0x0100
+	if (!(state & (TASK_INTERRUPTIBLE | TASK_WAKEKILL)))
+		return 0;
+	if (!signal_pending(p))
+		return 0;
+	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
+}
+
+
+static inline int signal_pending(struct task_struct *p)
+{
+//该宏定义用于检查指定任务的线程标志位TIF_SIGPENDING是否为真。如果为真，则表示任务有挂起的信号等待处理，返回1；否则返回0。
+	return unlikely(test_tsk_thread_flag(p,TIF_SIGPENDING));
+}
+
+
+
+
+void zap_pid_ns_processes(struct pid_namespace *pid_ns)
+{
+	int nr;
+	int rc;
+	struct task_struct *task, *me = current;
+	int init_pids = thread_group_leader(me) ? 1 : 2;
+	struct pid *pid;
+
+	/* Don't allow any more processes into the pid namespace */
+	disable_pid_allocation(pid_ns);
+
+	/*
+	 * Ignore SIGCHLD causing any terminated children to autoreap.
+	 * This speeds up the namespace shutdown, plus see the comment
+	 * below.
+	 */
+	spin_lock_irq(&me->sighand->siglock);
+	me->sighand->action[SIGCHLD - 1].sa.sa_handler = SIG_IGN;
+	spin_unlock_irq(&me->sighand->siglock);
+
+	/*
+	 * The last thread in the cgroup-init thread group is terminating.
+	 * Find remaining pid_ts in the namespace, signal and wait for them
+	 * to exit.
+	 *
+	 * Note:  This signals each threads in the namespace - even those that
+	 * 	  belong to the same thread group, To avoid this, we would have
+	 * 	  to walk the entire tasklist looking a processes in this
+	 * 	  namespace, but that could be unnecessarily expensive if the
+	 * 	  pid namespace has just a few processes. Or we need to
+	 * 	  maintain a tasklist for each pid namespace.
+	 *
+	 */
+	rcu_read_lock();
+	read_lock(&tasklist_lock);
+	nr = 2;
+	idr_for_each_entry_continue(&pid_ns->idr, pid, nr) {
+		task = pid_task(pid, PIDTYPE_PID);
+		if (task && !__fatal_signal_pending(task))
+		//这个地方忽略了信号处理
+			group_send_sig_info(SIGKILL, SEND_SIG_PRIV, task, PIDTYPE_MAX);
+	}
+	read_unlock(&tasklist_lock);
+	rcu_read_unlock();
+
+	/*
+	 * Reap the EXIT_ZOMBIE children we had before we ignored SIGCHLD.
+	 * kernel_wait4() will also block until our children traced from the
+	 * parent namespace are detached and become EXIT_DEAD.
+	 */
+	do {
+		clear_thread_flag(TIF_SIGPENDING);
+		rc = kernel_wait4(-1, NULL, __WALL, NULL);
+	} while (rc != -ECHILD);
+
+	/*
+	 * kernel_wait4() misses EXIT_DEAD children, and EXIT_ZOMBIE
+	 * process whose parents processes are outside of the pid
+	 * namespace.  Such processes are created with setns()+fork().
+	 *
+	 * If those EXIT_ZOMBIE processes are not reaped by their
+	 * parents before their parents exit, they will be reparented
+	 * to pid_ns->child_reaper.  Thus pidns->child_reaper needs to
+	 * stay valid until they all go away.
+	 *
+	 * The code relies on the pid_ns->child_reaper ignoring
+	 * SIGCHILD to cause those EXIT_ZOMBIE processes to be
+	 * autoreaped if reparented.
+	 *
+	 * Semantically it is also desirable to wait for EXIT_ZOMBIE
+	 * processes before allowing the child_reaper to be reaped, as
+	 * that gives the invariant that when the init process of a
+	 * pid namespace is reaped all of the processes in the pid
+	 * namespace are gone.
+	 *
+	 * Once all of the other tasks are gone from the pid_namespace
+	 * free_pid() will awaken this task.
+	 */
+	for (;;) {
+		set_current_state(TASK_INTERRUPTIBLE);
+		if (pid_ns->pid_allocated == init_pids)
+			break;
+		schedule();
+	}
+	__set_current_state(TASK_RUNNING);
+
+	if (pid_ns->reboot)
+		current->signal->group_exit_code = pid_ns->reboot;
+
+	acct_exit_ns(pid_ns);
+	return;
+}
+会调用
+group_send_sig_info
+
+
+int group_send_sig_info(int sig, struct kernel_siginfo *info,
+			struct task_struct *p, enum pid_type type)
+{
+	int ret;
+
+	rcu_read_lock();
+	ret = check_kill_permission(sig, info, p);
+	rcu_read_unlock();
+
+	if (!ret && sig)
+		ret = do_send_sig_info(sig, info, p, type);
+
+	return ret;
+}
+do_send_sig_info 实现如下
+int do_send_sig_info(int sig, struct kernel_siginfo *info, struct task_struct *p,
+			enum pid_type type)
+{
+	unsigned long flags;
+	int ret = -ESRCH;
+
+	if (lock_task_sighand(p, &flags)) {
+		ret = send_signal(sig, info, p, type);
+		unlock_task_sighand(p, &flags);
+	}
+
+	return ret;
+}
+
+ send_signal实现如下
+static int send_signal(int sig, struct kernel_siginfo *info, struct task_struct *t,
+			enum pid_type type)
+{
+	/* Should SIGKILL or SIGSTOP be received by a pid namespace init? */
+	bool force = false;
+
+	if (info == SEND_SIG_NOINFO) {
+		/* Force if sent from an ancestor pid namespace */
+		force = !task_pid_nr_ns(current, task_active_pid_ns(t));
+	} else if (info == SEND_SIG_PRIV) {
+		/* Don't ignore kernel generated signals */
+		force = true;
+	} else if (has_si_pid_and_uid(info)) {
+		/* SIGKILL and SIGSTOP is special or has ids */
+		struct user_namespace *t_user_ns;
+
+		rcu_read_lock();
+		t_user_ns = task_cred_xxx(t, user_ns);
+		if (current_user_ns() != t_user_ns) {
+			kuid_t uid = make_kuid(current_user_ns(), info->si_uid);
+			info->si_uid = from_kuid_munged(t_user_ns, uid);
+		}
+		rcu_read_unlock();
+
+		/* A kernel generated signal? */
+		force = (info->si_code == SI_KERNEL);
+
+		/* From an ancestor pid namespace? */
+		if (!task_pid_nr_ns(current, task_active_pid_ns(t))) {
+			info->si_pid = 0;
+			force = true;
+		}
+	}
+	return __send_signal(sig, info, t, type, force);
+}
+
+调用 
+static int __send_signal(int sig, struct kernel_siginfo *info, struct task_struct *t,
+			enum pid_type type, bool force)
+实现如下
+static int __send_signal(int sig, struct kernel_siginfo *info, struct task_struct *t,
+			enum pid_type type, bool force)
+{
+	struct sigpending *pending;
+	struct sigqueue *q;
+	int override_rlimit;
+	int ret = 0, result;
+
+	assert_spin_locked(&t->sighand->siglock);
+
+	result = TRACE_SIGNAL_IGNORED;
+	if (!prepare_signal(sig, t, force))
+		goto ret;
+
+	pending = (type != PIDTYPE_PID) ? &t->signal->shared_pending : &t->pending;
+	/*
+	 * Short-circuit ignored signals and support queuing
+	 * exactly one non-rt signal, so that we can get more
+	 * detailed information about the cause of the signal.
+	 */
+	result = TRACE_SIGNAL_ALREADY_PENDING;
+	if (legacy_queue(pending, sig))
+		goto ret;
+
+	result = TRACE_SIGNAL_DELIVERED;
+	/*
+	 * Skip useless siginfo allocation for SIGKILL and kernel threads.
+	 */
+	if ((sig == SIGKILL) || (t->flags & PF_KTHREAD))
+		goto out_set;
+
+	/*
+	 * Real-time signals must be queued if sent by sigqueue, or
+	 * some other real-time mechanism.  It is implementation
+	 * defined whether kill() does so.  We attempt to do so, on
+	 * the principle of least surprise, but since kill is not
+	 * allowed to fail with EAGAIN when low on memory we just
+	 * make sure at least one signal gets delivered and don't
+	 * pass on the info struct.
+	 */
+	if (sig < SIGRTMIN)
+		override_rlimit = (is_si_special(info) || info->si_code >= 0);
+	else
+		override_rlimit = 0;
+
+	q = __sigqueue_alloc(sig, t, GFP_ATOMIC, override_rlimit);
+	if (q) {
+		list_add_tail(&q->list, &pending->list);
+		switch ((unsigned long) info) {
+		case (unsigned long) SEND_SIG_NOINFO:
+			clear_siginfo(&q->info);
+			q->info.si_signo = sig;
+			q->info.si_errno = 0;
+			q->info.si_code = SI_USER;
+			q->info.si_pid = task_tgid_nr_ns(current,
+							task_active_pid_ns(t));
+			rcu_read_lock();
+			q->info.si_uid =
+				from_kuid_munged(task_cred_xxx(t, user_ns),
+						 current_uid());
+			rcu_read_unlock();
+			break;
+		case (unsigned long) SEND_SIG_PRIV:
+			clear_siginfo(&q->info);
+			q->info.si_signo = sig;
+			q->info.si_errno = 0;
+			q->info.si_code = SI_KERNEL;
+			q->info.si_pid = 0;
+			q->info.si_uid = 0;
+			break;
+		default:
+			copy_siginfo(&q->info, info);
+			break;
+		}
+	} else if (!is_si_special(info) &&
+		   sig >= SIGRTMIN && info->si_code != SI_USER) {
+		/*
+		 * Queue overflow, abort.  We may abort if the
+		 * signal was rt and sent by user using something
+		 * other than kill().
+		 */
+		result = TRACE_SIGNAL_OVERFLOW_FAIL;
+		ret = -EAGAIN;
+		goto ret;
+	} else {
+		/*
+		 * This is a silent loss of information.  We still
+		 * send the signal, but the *info bits are lost.
+		 */
+		result = TRACE_SIGNAL_LOSE_INFO;
+	}
+
+out_set:
+	signalfd_notify(t, sig);
+	sigaddset(&pending->signal, sig);
+
+	/* Let multiprocess signals appear after on-going forks */
+	if (type > PIDTYPE_TGID) {
+		struct multiprocess_signals *delayed;
+		hlist_for_each_entry(delayed, &t->signal->multiprocess, node) {
+			sigset_t *signal = &delayed->signal;
+			/* Can't queue both a stop and a continue signal */
+			if (sig == SIGCONT)
+				sigdelsetmask(signal, SIG_KERNEL_STOP_MASK);
+			else if (sig_kernel_stop(sig))
+				sigdelset(signal, SIGCONT);
+			sigaddset(signal, sig);
+		}
+	}
+
+	complete_signal(sig, t, type);
+ret:
+	trace_signal_generate(sig, info, t, type != PIDTYPE_PID, result);
+	return ret;
+}
+
+complete_signal(sig, t, type);中
+static void complete_signal(int sig, struct task_struct *p, enum pid_type type)
+{
+	struct signal_struct *signal = p->signal;
+	struct task_struct *t;
+	unsigned long sigs_mask = 0;
+
+	/*
+	 * Now find a thread we can wake up to take the signal off the queue.
+	 *
+	 * If the main thread wants the signal, it gets first crack.
+	 * Probably the least surprising to the average bear.
+	 */
+	if (wants_signal(sig, p))
+		t = p;
+	else if ((type == PIDTYPE_PID) || thread_group_empty(p))
+调用 wants_signal
+static inline bool wants_signal(int sig, struct task_struct *p)
+{
+	if (sigismember(&p->blocked, sig))
+		return false;
+
+	if (p->flags & PF_EXITING)
+		return false;
+
+	if (sig == SIGKILL)
+		return true;
+
+	if (task_is_stopped_or_traced(p))
+		return false;
+
+	return task_curr(p) || !signal_pending(p);
+}
+
+exit时候调用 do_exit()调用exit_signals
+设置状态为
+tsk->flags |= PF_EXITING;
+cgroup_threadgroup_change_end(tsk);
+
+
+
+1、Task 打开一个 FUSE 文件，然后没有关闭它就退出了。在退出过程中，内核会调用 do_exit()，其中包括以下操作：
+
+exit_signals(tsk); /* 设置 PF_EXITING 标志 */
+2、do_exit() 继续执行 exit_files(tsk);，刷新所有仍处于打开状态的文件，导致上面的堆栈跟踪。
+
+3、pid 命名空间退出，并进入 zap_pid_ns_processes()，向所有线程发送一个 SIGKILL，然后等待所有线程退出。
+
+4、这将杀死 pid 命名空间中的 FUSE 守护进程，使其无法响应。
+
+5、对于已经退出的 FUSE 线程，complete_signal() 会忽略该信号，因为它具有 PF_EXITING 标志。
+
+6、死锁。除非手动中止 FUSE 连接，否则这个事件将永远挂起。
